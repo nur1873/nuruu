@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="om">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Muxxee - Messaging App</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { 
+            overscroll-behavior: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .otp-input:focus { outline: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .slide-up { animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .fade-in { animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .message-bubble {
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] { -moz-appearance: textfield; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col"></div>
+
+    <script>
+        // ===================== DATABASE (localStorage simulation) =====================
+        const DB = {
+            init() {
+                if (!localStorage.getItem('muxxee_initialized')) {
+                    // Initialize categories
+                    const defaultCategories = [
+                        { id: 'cat1', name: 'Muxxee Oromoo', description: 'Garee Oromoo hundaaf', isVisible: true, createdAt: Date.now(), messageCount: 3 },
+                        { id: 'cat2', name: 'Qunxurroo Oromoo', description: 'Qunxurroo fi aadaa Oromoo', isVisible: true, createdAt: Date.now(), messageCount: 4 },
+                        { id: 'cat3', name: 'Oromoo Harargee ta wal saltu', description: 'Hawaasa Harargee', isVisible: true, createdAt: Date.now(), messageCount: 3 },
+                        { id: 'cat4', name: 'Muxxee Harargee', description: 'Muxxee Harargee keessaa', isVisible: true, createdAt: Date.now(), messageCount: 3 },
+                        { id: 'cat5', name: 'Muxxee Arsii', description: 'Muxxee Arsii keessaa', isVisible: true, createdAt: Date.now(), messageCount: 3 },
+                        { id: 'cat6', name: 'Muxxee Shawaa', description: 'Muxxee Shawaa keessaa', isVisible: true, createdAt: Date.now(), messageCount: 3 },
+                        { id: 'cat7', name: 'Muxxee Jimmaa', description: 'Muxxee Jimmaa keessaa', isVisible: true, createdAt: Date.now(), messageCount: 3 },
+                    ];
+                    localStorage.setItem('categories', JSON.stringify(defaultCategories));
+
+                    // Initialize fake messages
+                    const fakeMessages = {
+                        'cat1': [
+                            { id: 'm1', text: 'Akkam jirtu hunda!', senderPhone: '+251911111111', createdAt: Date.now() - 3600000 },
+                            { id: 'm2', text: 'Gaarii! Isin hoo?', senderPhone: '+251922222222', createdAt: Date.now() - 3000000 },
+                            { id: 'm3', text: 'Baga nagaan dhuftan gara Muxxee Oromoo!', senderPhone: '+251933333333', createdAt: Date.now() - 2400000 },
+                        ],
+                        'cat2': [
+                            { id: 'm4', text: 'Qunxurroo keenya eeggachuu qabna', senderPhone: '+251911111111', createdAt: Date.now() - 7200000 },
+                            { id: 'm5', text: 'Dhugaadha! Aadaan keenya baay\'ee bareedaadha', senderPhone: '+251944444444', createdAt: Date.now() - 6000000 },
+                            { id: 'm6', text: 'Sirba Oromoo dhageeffachaa jirtuu?', senderPhone: '+251955555555', createdAt: Date.now() - 5000000 },
+                            { id: 'm7', text: 'Eeyyee! Haacaaluu dhageeffachaan ture', senderPhone: '+251922222222', createdAt: Date.now() - 4000000 },
+                        ],
+                        'cat3': [
+                            { id: 'm8', text: 'Harargee irraa nagaa!', senderPhone: '+251966666666', createdAt: Date.now() - 8000000 },
+                            { id: 'm9', text: 'Akkam jirtu Harargee!', senderPhone: '+251977777777', createdAt: Date.now() - 7000000 },
+                            { id: 'm10', text: 'Buna Harargee nama hin dagachiisu!', senderPhone: '+251911111111', createdAt: Date.now() - 6500000 },
+                        ],
+                        'cat4': [
+                            { id: 'm11', text: 'Muxxee Harargee baga nagaan dhuftan!', senderPhone: '+251988888888', createdAt: Date.now() - 9000000 },
+                            { id: 'm12', text: 'Galatoomaa!', senderPhone: '+251999999999', createdAt: Date.now() - 8500000 },
+                            { id: 'm13', text: 'Harargee lafa aabbaa keenyaati!', senderPhone: '+251911111111', createdAt: Date.now() - 8000000 },
+                        ],
+                        'cat5': [
+                            { id: 'm14', text: 'Arsii irraa nagaa isinif!', senderPhone: '+251912121212', createdAt: Date.now() - 10000000 },
+                            { id: 'm15', text: 'Baga nagaan!', senderPhone: '+251913131313', createdAt: Date.now() - 9500000 },
+                            { id: 'm16', text: 'Hawaasa Arsii akkam jirtu?', senderPhone: '+251914141414', createdAt: Date.now() - 9000000 },
+                        ],
+                        'cat6': [
+                            { id: 'm17', text: 'Shawaa irraa akkam jirtu!', senderPhone: '+251915151515', createdAt: Date.now() - 11000000 },
+                            { id: 'm18', text: 'Gaariidha, isin hoo?', senderPhone: '+251916161616', createdAt: Date.now() - 10500000 },
+                            { id: 'm19', text: 'Finfinne irraa nagaa!', senderPhone: '+251917171717', createdAt: Date.now() - 10000000 },
+                        ],
+                        'cat7': [
+                            { id: 'm20', text: 'Jimmaa buna isa gaariidha!', senderPhone: '+251918181818', createdAt: Date.now() - 12000000 },
+                            { id: 'm21', text: 'Dhugaadha! Buna keenya addunyaatu beeka!', senderPhone: '+251919191919', createdAt: Date.now() - 11500000 },
+                            { id: 'm22', text: 'Jimmaa keessaa nagaa hundaaf!', senderPhone: '+251920202020', createdAt: Date.now() - 11000000 },
+                        ],
+                    };
+                    localStorage.setItem('messages', JSON.stringify(fakeMessages));
+
+                    // Initialize admin credentials
+                    localStorage.setItem('admin', JSON.stringify({ username: 'admin', password: 'muxxee2025', lastChanged: Date.now() }));
+
+                    // Initialize empty collections
+                    localStorage.setItem('users', JSON.stringify([]));
+                    localStorage.setItem('verification', JSON.stringify([]));
+                    localStorage.setItem('activity_log', JSON.stringify([]));
+
+                    localStorage.setItem('muxxee_initialized', 'true');
+                }
+            },
+            get(key) {
+                try {
+                    return JSON.parse(localStorage.getItem(key)) || [];
+                } catch {
+                    return [];
+                }
+            },
+            set(key, value) {
+                localStorage.setItem(key, JSON.stringify(value));
+            },
+            getCategories() {
+                return this.get('categories');
+            },
+            getVisibleCategories() {
+                return this.getCategories().filter(c => c.isVisible);
+            },
+            getMessages(categoryId) {
+                const messages = this.get('messages');
+                return messages[categoryId] || [];
+            },
+            addMessage(categoryId, message) {
+                const messages = this.get('messages');
+                if (!messages[categoryId]) messages[categoryId] = [];
+                messages[categoryId].push(message);
+                this.set('messages', messages);
+                
+                // Update message count
+                const categories = this.getCategories();
+                const cat = categories.find(c => c.id === categoryId);
+                if (cat) {
+                    cat.messageCount = messages[categoryId].length;
+                    this.set('categories', categories);
+                }
+            },
+            addUser(phoneNumber) {
+                const users = this.get('users');
+                const existing = users.find(u => u.phoneNumber === phoneNumber);
+                if (!existing) {
+                    users.push({ phoneNumber, createdAt: Date.now(), lastActive: Date.now() });
+                    this.set('users', users);
+                } else {
+                    existing.lastActive = Date.now();
+                    this.set('users', users);
+                }
+            },
+            logVerification(phoneNumber, code) {
+                const logs = this.get('verification');
+                logs.push({ phoneNumber, code, timestamp: Date.now(), success: true });
+                this.set('verification', logs);
+            },
+            logActivity(phone, action) {
+                const logs = this.get('activity_log');
+                logs.push({ phone, action, timestamp: Date.now() });
+                this.set('activity_log', logs);
+            },
+            addCategory(category) {
+                const categories = this.getCategories();
+                categories.push({ ...category, id: 'cat' + Date.now(), createdAt: Date.now(), messageCount: 0 });
+                this.set('categories', categories);
+            },
+            updateCategory(id, updates) {
+                const categories = this.getCategories();
+                const idx = categories.findIndex(c => c.id === id);
+                if (idx !== -1) {
+                    categories[idx] = { ...categories[idx], ...updates };
+                    this.set('categories', categories);
+                }
+            },
+            deleteCategory(id) {
+                const categories = this.getCategories().filter(c => c.id !== id);
+                this.set('categories', categories);
+                const messages = this.get('messages');
+                delete messages[id];
+                this.set('messages', messages);
+            },
+            getAdmin() {
+                return JSON.parse(localStorage.getItem('admin'));
+            },
+            updateAdmin(updates) {
+                const admin = this.getAdmin();
+                this.set('admin', { ...admin, ...updates, lastChanged: Date.now() });
+            },
+            updateUserActivity(phoneNumber) {
+                const users = this.get('users');
+                const user = users.find(u => u.phoneNumber === phoneNumber);
+                if (user) {
+                    user.lastActive = Date.now();
+                    this.set('users', users);
+                }
+            }
+        };
+
+        // ===================== APP STATE =====================
+        const AppState = {
+            currentScreen: 'phone', // phone, otp, main, chat, admin, adminDashboard
+            currentUser: null,
+            currentTab: 'groups',
+            currentCategory: null,
+            isAdmin: false,
+            adminTab: 'users',
+            versionTapCount: 0,
+            lastTapTime: 0,
+        };
+
+        // ===================== UTILITY FUNCTIONS =====================
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) return 'Just now';
+            if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+            if (diff < 86400000) return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function formatFullDate(timestamp) {
+            return new Date(timestamp).toLocaleString();
+        }
+
+        function generateId() {
+            return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // ===================== RENDER FUNCTIONS =====================
+        function render() {
+            const app = document.getElementById('app');
+            switch (AppState.currentScreen) {
+                case 'phone':
+                    app.innerHTML = renderPhoneScreen();
+                    break;
+                case 'otp':
+                    app.innerHTML = renderOTPScreen();
+                    setupOTPInputs();
+                    break;
+                case 'main':
+                    app.innerHTML = renderMainScreen();
+                    break;
+                case 'chat':
+                    app.innerHTML = renderChatScreen();
+                    scrollToBottom();
+                    break;
+                case 'admin':
+                    app.innerHTML = renderAdminLoginScreen();
+                    break;
+                case 'adminDashboard':
+                    app.innerHTML = renderAdminDashboard();
+                    break;
+            }
+        }
+
+        function renderPhoneScreen() {
+            return `
+                <div class="flex-1 flex flex-col justify-center px-6 fade-in">
+                    <div class="text-center mb-8">
+                        <div class="w-20 h-20 bg-blue-600 rounded-full mx-auto mb-6 flex items-center justify-center">
+                            <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                            </svg>
+                        </div>
+                        <h1 class="text-2xl font-bold mb-2">Galmaa'i / Sign in</h1>
+                        <p class="text-gray-400">Lakkofsa bilbilaa kee galchi<br><span class="text-sm">Enter your phone number</span></p>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <div class="flex bg-gray-800 rounded-xl overflow-hidden">
+                            <div class="bg-gray-700 px-4 py-4 flex items-center border-r border-gray-600">
+                                <span class="text-lg font-medium">+251</span>
+                            </div>
+                            <input 
+                                type="tel" 
+                                id="phoneInput" 
+                                placeholder="9XX XXX XXXX"
+                                maxlength="9"
+                                class="flex-1 bg-gray-800 px-4 py-4 text-lg focus:outline-none"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                            >
+                        </div>
+                    </div>
+                    
+                    <button 
+                        onclick="handlePhoneContinue()"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-xl text-lg transition-colors"
+                    >
+                        Itti fufi / Continue
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderOTPScreen() {
+            return `
+                <div class="flex-1 flex flex-col justify-center px-6 fade-in">
+                    <button onclick="AppState.currentScreen = 'phone'; render();" class="absolute top-4 left-4 p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    
+                    <div class="text-center mb-8">
+                        <div class="w-16 h-16 bg-green-600 rounded-full mx-auto mb-6 flex items-center justify-center">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <h1 class="text-2xl font-bold mb-2">Kodii ergame / Code received</h1>
+                        <p class="text-gray-400">Kodii shan digitii gara bilbila kee ergine nuuf galchi<br><span class="text-sm">Enter the 5-digit code</span></p>
+                        <p class="text-blue-400 mt-2 text-sm">${AppState.tempPhone}</p>
+                    </div>
+                    
+                    <div class="flex justify-center gap-3 mb-8">
+                        ${[1,2,3,4,5].map(i => `
+                            <input 
+                                type="text" 
+                                maxlength="1"
+                                inputmode="numeric"
+                                class="otp-input w-14 h-14 bg-gray-800 rounded-xl text-center text-2xl font-bold border-2 border-gray-700 focus:border-blue-500 transition-colors"
+                                data-index="${i}"
+                                oninput="handleOTPInput(this, ${i})"
+                                onkeydown="handleOTPKeydown(event, ${i})"
+                            >
+                        `).join('')}
+                    </div>
+                    
+                    <p class="text-center text-gray-500 text-sm">
+                        Demo mode: Any 5-digit code works
+                    </p>
+                </div>
+            `;
+        }
+
+        function setupOTPInputs() {
+            setTimeout(() => {
+                document.querySelector('.otp-input[data-index="1"]')?.focus();
+            }, 100);
+        }
+
+        function handleOTPInput(input, index) {
+            input.value = input.value.replace(/[^0-9]/g, '');
+            
+            if (input.value && index < 5) {
+                document.querySelector(`.otp-input[data-index="${index + 1}"]`)?.focus();
+            }
+            
+            // Check if all 5 digits are entered
+            const allInputs = document.querySelectorAll('.otp-input');
+            const code = Array.from(allInputs).map(i => i.value).join('');
+            
+            if (code.length === 5) {
+                verifyOTP(code);
+            }
+        }
+
+        function handleOTPKeydown(event, index) {
+            if (event.key === 'Backspace' && !event.target.value && index > 1) {
+                document.querySelector(`.otp-input[data-index="${index - 1}"]`)?.focus();
+            }
+        }
+
+        function verifyOTP(code) {
+            // Log verification attempt
+            DB.logVerification(AppState.tempPhone, code);
+            
+            // Register/update user
+            DB.addUser(AppState.tempPhone);
+            
+            // Log activity
+            DB.logActivity(AppState.tempPhone, 'Logged in');
+            
+            // Set current user
+            AppState.currentUser = AppState.tempPhone;
+            localStorage.setItem('currentUser', AppState.tempPhone);
+            
+            // Navigate to main screen
+            AppState.currentScreen = 'main';
+            render();
+        }
+
+        function handlePhoneContinue() {
+            const phoneInput = document.getElementById('phoneInput');
+            const phone = phoneInput.value.trim();
+            
+            if (phone.length < 9) {
+                phoneInput.classList.add('border-red-500');
+                return;
+            }
+            
+            AppState.tempPhone = '+251' + phone;
+            AppState.currentScreen = 'otp';
+            render();
+        }
+
+        function renderMainScreen() {
+            const tabs = [
+                { id: 'chats', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', label: 'Chats', labelEn: 'Waajjiraalee' },
+                { id: 'groups', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z', label: 'Groups', labelEn: 'Gareelee' },
+                { id: 'calls', icon: 'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z', label: 'Calls', labelEn: 'Bilbila' },
+                { id: 'settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z', label: 'Settings', labelEn: 'Qindeessaa' },
+            ];
+            
+            return `
+                <div class="flex flex-col h-screen">
+                    <!-- Header -->
+                    <div class="bg-gray-800 px-4 py-4 flex items-center justify-between">
+                        <h1 class="text-xl font-bold">
+                            ${AppState.currentTab === 'chats' ? 'Waajjiraalee' : 
+                              AppState.currentTab === 'groups' ? 'Gareelee' : 
+                              AppState.currentTab === 'calls' ? 'Bilbila' : 'Qindeessaa'}
+                        </h1>
+                        ${AppState.currentTab !== 'settings' ? `
+                        <button class="p-2 hover:bg-gray-700 rounded-full">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </button>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- Content -->
+                    <div class="flex-1 overflow-y-auto no-scrollbar">
+                        ${renderTabContent()}
+                    </div>
+                    
+                    <!-- Bottom Tabs -->
+                    <div class="bg-gray-800 border-t border-gray-700 px-2 py-2 flex justify-around">
+                        ${tabs.map(tab => `
+                            <button 
+                                onclick="AppState.currentTab = '${tab.id}'; render();"
+                                class="flex flex-col items-center py-2 px-4 rounded-lg transition-colors ${AppState.currentTab === tab.id ? 'text-blue-500' : 'text-gray-400 hover:text-white'}"
+                            >
+                                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${tab.icon}"/>
+                                </svg>
+                                <span class="text-xs">${tab.labelEn}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTabContent() {
+            switch (AppState.currentTab) {
+                case 'chats':
+                    return renderChatsTab();
+                case 'groups':
+                    return renderGroupsTab();
+                case 'calls':
+                    return renderCallsTab();
+                case 'settings':
+                    return renderSettingsTab();
+                default:
+                    return '';
+            }
+        }
+
+        function renderChatsTab() {
+            return `
+                <div class="p-4">
+                    <div class="text-center text-gray-500 py-12">
+                        <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                        </svg>
+                        <p class="text-lg mb-2">Ergaa dhuunfaa hin qabdu</p>
+                        <p class="text-sm">No private chats yet</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderGroupsTab() {
+            const categories = DB.getVisibleCategories();
+            
+            return `
+                <div class="divide-y divide-gray-800">
+                    ${categories.map(cat => {
+                        const messages = DB.getMessages(cat.id);
+                        const lastMessage = messages[messages.length - 1];
+                        return `
+                            <div 
+                                onclick="openCategory('${cat.id}')"
+                                class="flex items-center p-4 hover:bg-gray-800 cursor-pointer transition-colors"
+                            >
+                                <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-4">
+                                    <span class="text-xl font-bold">${cat.name.charAt(0)}</span>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <h3 class="font-semibold truncate">${cat.name}</h3>
+                                        <span class="text-xs text-gray-500">${lastMessage ? formatTime(lastMessage.createdAt) : ''}</span>
+                                    </div>
+                                    <p class="text-sm text-gray-400 truncate">
+                                        ${lastMessage ? lastMessage.text : cat.description}
+                                    </p>
+                                </div>
+                                ${messages.length > 0 ? `
+                                    <div class="ml-2 bg-blue-600 text-xs px-2 py-1 rounded-full">
+                                        ${messages.length}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        function renderCallsTab() {
+            return `
+                <div class="p-4">
+                    <div class="text-center text-gray-500 py-12">
+                        <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                        </svg>
+                        <p class="text-lg mb-2">Bilbila hin qabdu</p>
+                        <p class="text-sm">No calls yet</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSettingsTab() {
+            return `
+                <div class="p-4">
+                    <!-- Profile Section -->
+                    <div class="flex items-center p-4 bg-gray-800 rounded-xl mb-4">
+                        <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center mr-4">
+                            <span class="text-2xl font-bold">${AppState.currentUser?.slice(-2)}</span>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-lg">${AppState.currentUser}</h3>
+                            <p class="text-gray-400 text-sm">Online</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Settings Options -->
+                    <div class="space-y-2">
+                        <div class="flex items-center p-4 bg-gray-800 rounded-xl">
+                            <svg class="w-6 h-6 mr-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                            </svg>
+                            <span>Beeksisa / Notifications</span>
+                        </div>
+                        
+                        <div class="flex items-center p-4 bg-gray-800 rounded-xl">
+                            <svg class="w-6 h-6 mr-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                            <span>Icciitii / Privacy</span>
+                        </div>
+                        
+                        <div class="flex items-center p-4 bg-gray-800 rounded-xl">
+                            <svg class="w-6 h-6 mr-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                            </svg>
+                            <span>Bifa / Appearance</span>
+                        </div>
+                        
+                        <div class="flex items-center p-4 bg-gray-800 rounded-xl">
+                            <svg class="w-6 h-6 mr-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span>Gargaarsa / Help</span>
+                        </div>
+                        
+                        <button 
+                            onclick="logout()"
+                            class="flex items-center p-4 bg-gray-800 rounded-xl w-full text-red-400"
+                        >
+                            <svg class="w-6 h-6 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                            </svg>
+                            <span>Ba'i / Logout</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Version (Secret Admin Trigger) -->
+                    <div class="mt-8 text-center">
+                        <p 
+                            onclick="handleVersionTap()"
+                            class="text-gray-600 text-sm cursor-pointer select-none"
+                        >
+                            App version 1.0.0
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function openCategory(categoryId) {
+            const categories = DB.getCategories();
+            AppState.currentCategory = categories.find(c => c.id === categoryId);
+            AppState.currentScreen = 'chat';
+            DB.logActivity(AppState.currentUser, `Opened category: ${AppState.currentCategory.name}`);
+            render();
+        }
+
+        function renderChatScreen() {
+            const messages = DB.getMessages(AppState.currentCategory.id);
+            
+            return `
+                <div class="flex flex-col h-screen">
+                    <!-- Header -->
+                    <div class="bg-gray-800 px-4 py-3 flex items-center">
+                        <button onclick="AppState.currentScreen = 'main'; render();" class="p-2 -ml-2 mr-2">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                            </svg>
+                        </button>
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
+                            <span class="font-bold">${AppState.currentCategory.name.charAt(0)}</span>
+                        </div>
+                        <div class="flex-1">
+                            <h2 class="font-semibold">${AppState.currentCategory.name}</h2>
+                            <p class="text-xs text-gray-400">${messages.length} messages</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Messages -->
+                    <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
+                        ${messages.map(msg => {
+                            const isMe = msg.senderPhone === AppState.currentUser;
+                            return `
+                                <div class="flex ${isMe ? 'justify-end' : 'justify-start'}">
+                                    <div class="message-bubble ${isMe ? 'bg-blue-600' : 'bg-gray-700'} px-4 py-2 rounded-2xl ${isMe ? 'rounded-br-md' : 'rounded-bl-md'}">
+                                        ${!isMe ? `<p class="text-xs text-blue-400 mb-1">${msg.senderPhone}</p>` : ''}
+                                        <p>${msg.text}</p>
+                                        <p class="text-xs ${isMe ? 'text-blue-200' : 'text-gray-400'} text-right mt-1">${formatTime(msg.createdAt)}</p>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    
+                    <!-- Input -->
+                    <div class="bg-gray-800 p-3 flex items-center gap-2">
+                        <input 
+                            type="text" 
+                            id="messageInput"
+                            placeholder="Ergaa barreessi..."
+                            class="flex-1 bg-gray-700 rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onkeypress="if(event.key==='Enter')sendMessage()"
+                        >
+                        <button 
+                            onclick="sendMessage()"
+                            class="bg-blue-600 hover:bg-blue-700 p-3 rounded-full transition-colors"
+                        >
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            
+            if (!text) return;
+            
+            const message = {
+                id: generateId(),
+                text: text,
+                senderPhone: AppState.currentUser,
+                createdAt: Date.now()
+            };
+            
+            DB.addMessage(AppState.currentCategory.id, message);
+            DB.logActivity(AppState.currentUser, `Sent message in ${AppState.currentCategory.name}`);
+            DB.updateUserActivity(AppState.currentUser);
+            
+            input.value = '';
+            render();
+        }
+
+        function scrollToBottom() {
+            setTimeout(() => {
+                const container = document.getElementById('messagesContainer');
+                if (container) {
+                    container.scrollTop = container.scrollHeight;
+                }
+            }, 50);
+        }
+
+        function logout() {
+            localStorage.removeItem('currentUser');
+            AppState.currentUser = null;
+            AppState.currentScreen = 'phone';
+            AppState.isAdmin = false;
+            render();
+        }
+
+        function handleVersionTap() {
+            const now = Date.now();
+            
+            if (now - AppState.lastTapTime > 500) {
+                AppState.versionTapCount = 1;
+            } else {
+                AppState.versionTapCount++;
+            }
+            
+            AppState.lastTapTime = now;
+            
+            if (AppState.versionTapCount >= 8) {
+                AppState.versionTapCount = 0;
+                AppState.currentScreen = 'admin';
+                render();
+            }
+        }
+
+        function renderAdminLoginScreen() {
+            return `
+                <div class="flex-1 flex flex-col justify-center px-6 fade-in">
+                    <button onclick="AppState.currentScreen = 'main'; render();" class="absolute top-4 left-4 p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                    
+                    <div class="text-center mb-8">
+                        <div class="w-16 h-16 bg-red-600 rounded-full mx-auto mb-6 flex items-center justify-center">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                        </div>
+                        <h1 class="text-2xl font-bold mb-2">Admin Login</h1>
+                        <p class="text-gray-400">Enter admin credentials</p>
+                    </div>
+                    
+                    <div class="space-y-4 mb-6">
+                        <input 
+                            type="text" 
+                            id="adminUsername"
+                            placeholder="Username"
+                            class="w-full bg-gray-800 rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-red-500"
+                        >
+                        <input 
+                            type="password" 
+                            id="adminPassword"
+                            placeholder="Password"
+                            class="w-full bg-gray-800 rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-red-500"
+                            onkeypress="if(event.key==='Enter')adminLogin()"
+                        >
+                    </div>
+                    
+                    <button 
+                        onclick="adminLogin()"
+                        class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-4 rounded-xl text-lg transition-colors"
+                    >
+                        Login as Admin
+                    </button>
+                    
+                    <p id="adminError" class="text-red-500 text-center mt-4 hidden">Invalid credentials</p>
+                </div>
+            `;
+        }
+
+        function adminLogin() {
+            const username = document.getElementById('adminUsername').value;
+            const password = document.getElementById('adminPassword').value;
+            const admin = DB.getAdmin();
+            
+            if (username === admin.username && password === admin.password) {
+                AppState.isAdmin = true;
+                AppState.currentScreen = 'adminDashboard';
+                render();
+            } else {
+                document.getElementById('adminError').classList.remove('hidden');
+            }
+        }
+
+        function renderAdminDashboard() {
+            const tabs = ['users', 'verification', 'activity', 'categories', 'settings'];
+            const tabLabels = {
+                users: 'Users',
+                verification: 'Verifications', 
+                activity: 'Activity',
+                categories: 'Categories',
+                settings: 'Admin Settings'
+            };
+            
+            return `
+                <div class="flex flex-col h-screen">
+                    <!-- Header -->
+                    <div class="bg-red-900 px-4 py-4 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <button onclick="AppState.currentScreen = 'main'; AppState.isAdmin = false; render();" class="p-2 -ml-2 mr-2">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                                </svg>
+                            </button>
+                            <h1 class="text-xl font-bold">Admin Dashboard</h1>
+                        </div>
+                    </div>
+                    
+                    <!-- Tabs -->
+                    <div class="bg-gray-800 flex overflow-x-auto no-scrollbar">
+                        ${tabs.map(tab => `
+                            <button 
+                                onclick="AppState.adminTab = '${tab}'; render();"
+                                class="px-4 py-3 text-sm whitespace-nowrap ${AppState.adminTab === tab ? 'text-red-500 border-b-2 border-red-500' : 'text-gray-400'}"
+                            >
+                                ${tabLabels[tab]}
+                            </button>
+                        `).join('')}
+                    </div>
+                    
+                    <!-- Content -->
+                    <div class="flex-1 overflow-y-auto p-4 no-scrollbar">
+                        ${renderAdminTabContent()}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAdminTabContent() {
+            switch (AppState.adminTab) {
+                case 'users':
+                    return renderAdminUsers();
+                case 'verification':
+                    return renderAdminVerifications();
+                case 'activity':
+                    return renderAdminActivity();
+                case 'categories':
+                    return renderAdminCategories();
+                case 'settings':
+                    return renderAdminSettings();
+                default:
+                    return '';
+            }
+        }
+
+        function renderAdminUsers() {
+            const users = DB.get('users');
+            
+            return `
+                <div class="space-y-2">
+                    <h2 class="text-lg font-bold mb-4">Registered Users (${users.length})</h2>
+                    ${users.length === 0 ? '<p class="text-gray-500">No users registered yet</p>' : ''}
+                    ${users.map(user => `
+                        <div class="bg-gray-800 p-4 rounded-xl">
+                            <p class="font-semibold">${user.phoneNumber}</p>
+                            <p class="text-sm text-gray-400">Registered: ${formatFullDate(user.createdAt)}</p>
+                            <p class="text-sm text-gray-400">Last active: ${formatFullDate(user.lastActive)}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderAdminVerifications() {
+            const verifications = DB.get('verification');
+            
+            return `
+                <div class="space-y-2">
+                    <h2 class="text-lg font-bold mb-4">Verification Attempts (${verifications.length})</h2>
+                    ${verifications.length === 0 ? '<p class="text-gray-500">No verification attempts yet</p>' : ''}
+                    ${verifications.slice().reverse().map(v => `
+                        <div class="bg-gray-800 p-4 rounded-xl">
+                            <div class="flex justify-between items-center">
+                                <p class="font-semibold">${v.phoneNumber}</p>
+                                <span class="px-2 py-1 bg-green-600 rounded text-xs">Success</span>
+                            </div>
+                            <p class="text-sm text-gray-400">Code: ${v.code}</p>
+                            <p class="text-sm text-gray-400">${formatFullDate(v.timestamp)}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderAdminActivity() {
+            const activities = DB.get('activity_log');
+            
+            return `
+                <div class="space-y-2">
+                    <h2 class="text-lg font-bold mb-4">Activity Log (${activities.length})</h2>
+                    ${activities.length === 0 ? '<p class="text-gray-500">No activity logged yet</p>' : ''}
+                    ${activities.slice().reverse().slice(0, 50).map(a => `
+                        <div class="bg-gray-800 p-4 rounded-xl">
+                            <p class="font-semibold">${a.phone}</p>
+                            <p class="text-sm text-blue-400">${a.action}</p>
+                            <p class="text-xs text-gray-400">${formatFullDate(a.timestamp)}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderAdminCategories() {
+            const categories = DB.getCategories();
+            
+            return `
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold">Categories (${categories.length})</h2>
+                        <button 
+                            onclick="showAddCategoryModal()"
+                            class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-semibold"
+                        >
+                            + Add New
+                        </button>
+                    </div>
+                    
+                    ${categories.map(cat => `
+                        <div class="bg-gray-800 p-4 rounded-xl">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <h3 class="font-semibold">${cat.name}</h3>
+                                    <p class="text-sm text-gray-400">${cat.description || 'No description'}</p>
+                                </div>
+                                <span class="px-2 py-1 ${cat.isVisible ? 'bg-green-600' : 'bg-red-600'} rounded text-xs">
+                                    ${cat.isVisible ? 'Visible' : 'Hidden'}
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-500 mb-3">
+                                Messages: ${cat.messageCount || 0} | Created: ${formatTime(cat.createdAt)}
+                            </p>
+                            <div class="flex gap-2">
+                                <button 
+                                    onclick="toggleCategoryVisibility('${cat.id}')"
+                                    class="flex-1 bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded text-sm"
+                                >
+                                    ${cat.isVisible ? 'Hide' : 'Show'}
+                                </button>
+                                <button 
+                                    onclick="showEditCategoryModal('${cat.id}')"
+                                    class="flex-1 bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded text-sm"
+                                >
+                                    Edit
+                                </button>
+                                <button 
+                                    onclick="deleteCategory('${cat.id}')"
+                                    class="flex-1 bg-red-600 hover:bg-red-700 px-3 py-2 rounded text-sm"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <!-- Add/Edit Modal -->
+                <div id="categoryModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50">
+                    <div class="bg-gray-800 rounded-2xl p-6 w-full max-w-sm slide-up">
+                        <h3 id="modalTitle" class="text-xl font-bold mb-4">Add Category</h3>
+                        <input type="hidden" id="editCategoryId">
+                        <div class="space-y-4">
+                            <input 
+                                type="text" 
+                                id="categoryName"
+                                placeholder="Category Name (Oromo)"
+                                class="w-full bg-gray-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                            <input 
+                                type="text" 
+                                id="categoryDescription"
+                                placeholder="Description (optional)"
+                                class="w-full bg-gray-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                        </div>
+                        <div class="flex gap-3 mt-6">
+                            <button 
+                                onclick="hideCategoryModal()"
+                                class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-xl"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onclick="saveCategory()"
+                                class="flex-1 bg-blue-600 hover:bg-blue-700 py-3 rounded-xl"
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showAddCategoryModal() {
+            document.getElementById('categoryModal').classList.remove('hidden');
+            document.getElementById('categoryModal').classList.add('flex');
+            document.getElementById('modalTitle').textContent = 'Add Category';
+            document.getElementById('editCategoryId').value = '';
+            document.getElementById('categoryName').value = '';
+            document.getElementById('categoryDescription').value = '';
+        }
+
+        function showEditCategoryModal(id) {
+            const categories = DB.getCategories();
+            const cat = categories.find(c => c.id === id);
+            
+            document.getElementById('categoryModal').classList.remove('hidden');
+            document.getElementById('categoryModal').classList.add('flex');
+            document.getElementById('modalTitle').textContent = 'Edit Category';
+            document.getElementById('editCategoryId').value = id;
+            document.getElementById('categoryName').value = cat.name;
+            document.getElementById('categoryDescription').value = cat.description || '';
+        }
+
+        function hideCategoryModal() {
+            document.getElementById('categoryModal').classList.add('hidden');
+            document.getElementById('categoryModal').classList.remove('flex');
+        }
+
+        function saveCategory() {
+            const id = document.getElementById('editCategoryId').value;
+            const name = document.getElementById('categoryName').value.trim();
+            const description = document.getElementById('categoryDescription').value.trim();
+            
+            if (!name) return;
+            
+            if (id) {
+                DB.updateCategory(id, { name, description });
+            } else {
+                DB.addCategory({ name, description, isVisible: true });
+            }
+            
+            hideCategoryModal();
+            render();
+        }
+
+        function toggleCategoryVisibility(id) {
+            const categories = DB.getCategories();
+            const cat = categories.find(c => c.id === id);
+            if (cat) {
+                DB.updateCategory(id, { isVisible: !cat.isVisible });
+                render();
+            }
+        }
+
+        function deleteCategory(id) {
+            if (confirm('Are you sure you want to delete this category? All messages will be lost.')) {
+                DB.deleteCategory(id);
+                render();
+            }
+        }
+
+        function renderAdminSettings() {
+            const admin = DB.getAdmin();
+            
+            return `
+                <div class="space-y-4">
+                    <h2 class="text-lg font-bold mb-4">Admin Account Settings</h2>
+                    
+                    <div class="bg-gray-800 p-4 rounded-xl">
+                        <p class="text-sm text-gray-400 mb-4">Last changed: ${formatFullDate(admin.lastChanged)}</p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-2">Username</label>
+                                <input 
+                                    type="text" 
+                                    id="newAdminUsername"
+                                    value="${admin.username}"
+                                    class="w-full bg-gray-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                >
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-2">New Password</label>
+                                <input 
+                                    type="password" 
+                                    id="newAdminPassword"
+                                    placeholder="Enter new password"
+                                    class="w-full bg-gray-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                >
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-2">Confirm Password</label>
+                                <input 
+                                    type="password" 
+                                    id="confirmAdminPassword"
+                                    placeholder="Confirm new password"
+                                    class="w-full bg-gray-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                >
+                            </div>
+                            
+                            <button 
+                                onclick="updateAdminCredentials()"
+                                class="w-full bg-red-600 hover:bg-red-700 py-3 rounded-xl font-semibold"
+                            >
+                                Update Credentials
+                            </button>
+                            
+                            <p id="adminUpdateMessage" class="text-center text-sm hidden"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-yellow-900/30 border border-yellow-600 p-4 rounded-xl">
+                        <p class="text-yellow-500 text-sm">
+                            ⚠️ Security Note: In production, admin credentials should be hashed and stored securely in Firebase with proper security rules.
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateAdminCredentials() {
+            const username = document.getElementById('newAdminUsername').value.trim();
+            const password = document.getElementById('newAdminPassword').value;
+            const confirmPassword = document.getElementById('confirmAdminPassword').value;
+            const messageEl = document.getElementById('adminUpdateMessage');
+            
+            if (!username) {
+                messageEl.textContent = 'Username is required';
+                messageEl.className = 'text-center text-sm text-red-500';
+                messageEl.classList.remove('hidden');
+                return;
+            }
+            
+            if (password && password !== confirmPassword) {
+                messageEl.textContent = 'Passwords do not match';
+                messageEl.className = 'text-center text-sm text-red-500';
+                messageEl.classList.remove('hidden');
+                return;
+            }
+            
+            const updates = { username };
+            if (password) {
+                updates.password = password;
+            }
+            
+            DB.updateAdmin(updates);
+            
+            messageEl.textContent = 'Credentials updated successfully!';
+            messageEl.className = 'text-center text-sm text-green-500';
+            messageEl.classList.remove('hidden');
+            
+            setTimeout(() => {
+                messageEl.classList.add('hidden');
+            }, 3000);
+        }
+
+        // ===================== INITIALIZATION =====================
+        function init() {
+            DB.init();
+            
+            // Check for existing session
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                AppState.currentUser = savedUser;
+                AppState.currentScreen = 'main';
+                DB.updateUserActivity(savedUser);
+                DB.logActivity(savedUser, 'Opened app');
+            }
+            
+            render();
+        }
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>
